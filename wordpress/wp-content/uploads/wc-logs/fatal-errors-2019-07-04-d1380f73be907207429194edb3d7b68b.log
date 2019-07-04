@@ -1,0 +1,8 @@
+<<<<<<< HEAD
+2019-07-04T10:47:34+00:00 CRITICAL Maximum execution time of 30 seconds exceeded dans C:\xampp\htdocs\laBoutique\wordpress\wp-includes\Requests\Transport\cURL.php à la ligne 163
+
+2019-07-04T10:49:32+00:00 CRITICAL Maximum execution time of 30 seconds exceeded dans C:\xampp\htdocs\laBoutique\wordpress\wp-includes\Requests\Transport\cURL.php à la ligne 163
+=======
+2019-07-04T08:33:56+00:00 CRITICAL Maximum execution time of 30 seconds exceeded dans C:\xampp\htdocs\laBoutique\wordpress\wp-content\plugins\themegrill-demo-importer\includes\importers\class-widget-importer.php à la ligne 16
+>>>>>>> 60bd359e6a862acd0e589623594190937e997d82
+

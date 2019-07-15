@@ -1,0 +1,4 @@
+2019-07-15T10:52:34+00:00 CRITICAL Maximum execution time of 30 seconds exceeded dans C:\xampp\htdocs\laBoutique\wordpress\wp-includes\Requests\Transport\cURL.php à la ligne 441
+
+2019-07-15T11:39:52+00:00 CRITICAL Maximum execution time of 30 seconds exceeded dans C:\xampp\htdocs\laBoutique\wordpress\wp-includes\Requests\Transport\cURL.php à la ligne 463
+

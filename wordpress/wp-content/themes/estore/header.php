@@ -23,6 +23,20 @@
 </head>
 
 <body <?php body_class(); ?>>
+
+<?php
+/**
+ * WordPress function to load custom scripts after body.
+ *
+ * Introduced in WordPress 5.2.0
+ *
+ * @since eStore 1.3.9
+ */
+if ( function_exists( 'wp_body_open' ) ) {
+	wp_body_open();
+}
+?>
+
 <?php do_action( 'tg_before' ); ?>
 <div id="page" class="hfeed site">
 	<a class="skip-link screen-reader-text" href="#content"><?php esc_html_e( 'Skip to content', 'estore' ); ?></a>

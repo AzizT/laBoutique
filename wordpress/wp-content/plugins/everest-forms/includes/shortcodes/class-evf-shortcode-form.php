@@ -34,6 +34,7 @@ class EVF_Shortcode_Form {
 	 */
 	public static function hooks() {
 		add_action( 'everest_forms_frontend_output_success', 'evf_print_notices', 10, 2 );
+		add_action( 'everest_forms_frontend_output', array( 'EVF_Shortcode_Form', 'header' ), 5, 4 );
 		add_action( 'everest_forms_frontend_output', array( 'EVF_Shortcode_Form', 'fields' ), 10, 3 );
 		add_action( 'everest_forms_display_field_before', array( 'EVF_Shortcode_Form', 'wrapper_start' ), 5, 2 );
 		add_action( 'everest_forms_display_field_before', array( 'EVF_Shortcode_Form', 'label' ), 15, 2 );
@@ -66,7 +67,9 @@ class EVF_Shortcode_Form {
 		$visibility_class = apply_filters( 'everest_forms_field_submit_visibility_class', array(), self::$parts, $form_data );
 
 		// Check for submit button processing-text.
-		if ( ! empty( $settings['submit_button_processing_text'] ) ) {
+		if ( ! isset( $settings['submit_button_processing_text'] ) ) {
+			$process = 'data-process-text="' . esc_attr__( 'Processing&hellip;', 'everest-forms' ) . '"';
+		} elseif ( ! empty( $settings['submit_button_processing_text'] ) ) {
 			$process = 'data-process-text="' . esc_attr( $settings['submit_button_processing_text'] ) . '"';
 		}
 
@@ -194,11 +197,42 @@ class EVF_Shortcode_Form {
 	public static function wrapper_start( $field, $form_data ) {
 		$container                     = $field['properties']['container'];
 		$container['data']['field-id'] = esc_attr( $field['id'] );
-
 		printf(
 			'<div %s>',
 			evf_html_attributes( $container['id'], $container['class'], $container['data'], $container['attr'] )
 		);
+	}
+
+	/**
+	 * Form header for displaying form title and description if enabled.
+	 *
+	 * @param array $form_data   Form data and settings.
+	 * @param bool  $title       Whether to display form title.
+	 * @param bool  $description Whether to display form description.
+	 * @param array $errors      List of all errors during form submission.
+	 */
+	public static function header( $form_data, $title, $description, $errors ) {
+		$settings = isset( $form_data['settings'] ) ? $form_data['settings'] : array();
+
+		// Check if title and/or description is enabled.
+		if ( true === $title || true === $description ) {
+			echo '<div class="evf-title-container">';
+
+			if ( true === $title && ! empty( $settings['form_title'] ) ) {
+				echo '<div class="everest-forms--title">' . esc_html( $settings['form_title'] ) . '</div>';
+			}
+
+			if ( true === $description && ! empty( $settings['form_description'] ) ) {
+				echo '<div class="everest-forms--description">' . esc_textarea( $settings['form_description'] ) . '</div>';
+			}
+
+			echo '</div>';
+		}
+
+		// Output header errors if they exist.
+		if ( ! empty( $errors['header'] ) ) {
+			evf_add_notice( $errors['header'], 'error' );
+		}
 	}
 
 	/**
@@ -417,7 +451,7 @@ class EVF_Shortcode_Form {
 		}
 
 		// Input class.
-		if ( ! in_array( $field['type'], array( 'checkbox', 'radio' ) ) ) {
+		if ( ! in_array( $field['type'], array( 'checkbox', 'radio', 'payment-checkbox', 'payment-multiple' ) ) ) {
 			$attributes['input_class'][] = 'input-text';
 		}
 
@@ -430,19 +464,21 @@ class EVF_Shortcode_Form {
 		if ( ! empty( $field['size'] ) ) {
 			$attributes['input_class'][] = 'evf-field-' . sanitize_html_class( $field['size'] );
 		}
+
 		// Check if required.
 		if ( ! empty( $field['required'] ) ) {
 			$attributes['field_class'][] = 'validate-required';
 		}
 
 		// Check if extra validation required.
-		if ( in_array( $field['type'], array( 'email', 'phone' ) ) ) {
+		if ( in_array( $field['type'], array( 'email', 'phone' ), true ) ) {
 			$attributes['field_class'][] = 'validate-' . esc_attr( $field['type'] );
 		}
 
 		// Check if there are errors.
-		if ( ! empty( evf()->task->errors[ $form_id ][ $field_id ] ) ) {
+		if ( isset( evf()->task->errors[ $form_id ][ $field_id ] ) ) {
 			$attributes['input_class'][] = 'evf-error';
+			$attributes['field_class'][] = 'everest-forms-invalid';
 		}
 
 		// This filter is deprecated, filter the properties (below) instead.
@@ -570,9 +606,9 @@ class EVF_Shortcode_Form {
 	/**
 	 * Form view.
 	 *
-	 * @param int     $id
-	 * @param bool    $title
-	 * @param boolean $description
+	 * @param int  $id Form ID.
+	 * @param bool $title Whether to display form title.
+	 * @param bool $description Whether to display form description.
 	 */
 	private static function view( $id, $title = false, $description = false ) {
 		if ( empty( $id ) ) {
@@ -582,29 +618,38 @@ class EVF_Shortcode_Form {
 		// Grab the form data, if not found then we bail.
 		$form = EVF()->form->get( (int) $id );
 
-		if ( empty( $form ) || $form->post_status !== 'publish' ) {
+		if ( empty( $form ) || 'publish' !== $form->post_status ) {
 			return;
 		}
 
-		// Basic information.
-		$form_data   = apply_filters( 'everest_forms_frontend_form_data', evf_decode( $form->post_content ) );
-		$form_id     = absint( $form->ID );
-		$settings    = $form_data['settings'];
-		$action      = esc_url_raw( remove_query_arg( 'evf-forms' ) );
-		$title       = filter_var( $title, FILTER_VALIDATE_BOOLEAN );
-		$description = filter_var( $description, FILTER_VALIDATE_BOOLEAN );
+		// Basic form information.
+		$form_data       = apply_filters( 'everest_forms_frontend_form_data', evf_decode( $form->post_content ) );
+		$form_id         = absint( $form->ID );
+		$settings        = $form_data['settings'];
+		$action          = esc_url_raw( remove_query_arg( 'evf-forms' ) );
+		$title           = filter_var( $title, FILTER_VALIDATE_BOOLEAN );
+		$description     = filter_var( $description, FILTER_VALIDATE_BOOLEAN );
+		$errors          = isset( evf()->task->errors[ $form_id ] ) ? evf()->task->errors[ $form_id ] : array();
+		$form_enabled    = isset( $form_data['form_enabled'] ) ? absint( $form_data['form_enabled'] ) : 1;
+		$disable_message = isset( $form_data['settings']['form_disable_message'] ) ? $form_data['settings']['form_disable_message'] : __( 'This form is disabled.', 'everest-forms' );
 
-		// If the form does not contain any fields do not proceed.
+		// If the form is disabled or does not contain any fields do not proceed.
 		if ( empty( $form_data['form_fields'] ) ) {
-			echo '<!-- EverestForms: no fields, form hidden -->';
+			echo '<!-- Everest Forms: no fields, form hidden -->';
+			return;
+		} elseif ( 1 !== $form_enabled ) {
+			if ( ! empty( $disable_message ) ) {
+				printf( '<p class="everst-forms-form-disable-notice everest-forms-notice everest-forms-notice--info">%s</p>', esc_textarea( $disable_message ) );
+			}
 			return;
 		}
 
 		// Before output hook.
 		do_action( 'everest_forms_frontend_output_before', $form_data, $form );
 
-		// Allow filter to return early if some condition is not met.
-		if ( ! apply_filters( 'everest_forms_frontend_load', true, $form_data, null ) ) {
+		// Allow filter to return early if some condition is not meet.
+		if ( ! apply_filters( 'everest_forms_frontend_load', true, $form_data ) ) {
+			do_action( 'everest_forms_frontend_not_loaded', $form_data, $form );
 			return;
 		}
 
@@ -630,36 +675,39 @@ class EVF_Shortcode_Form {
 		}
 		$classes = evf_sanitize_classes( $classes, true );
 
-		// Begin to build the output
-		printf(
-			'<div class="evf-container %s" id="evf-%d">',
-			$classes,
-			$form_id
+		$form_atts = apply_filters(
+			'everest_forms_frontend_form_atts',
+			array(
+				'id'    => sprintf( 'evf-form-%d', absint( $form_id ) ),
+				'class' => array( 'everest-form' ),
+				'data'  => array(
+					'formid' => absint( $form_id ),
+				),
+				'atts'  => array(
+					'method'  => 'post',
+					'enctype' => 'multipart/form-data',
+					'action'  => esc_url( $action ),
+				),
+			),
+			$form_data
 		);
 
-			$form_atts = apply_filters(
-				'everest_forms_frontend_form_atts',
-				array(
-					'id'    => sprintf( 'evf-form-%d', absint( $form_id ) ),
-					'class' => array( 'everest-form' ),
-					'data'  => array(
-						'formid' => absint( $form_id ),
-					),
-					'atts'  => array(
-						'method'  => 'post',
-						'enctype' => 'multipart/form-data',
-						'action'  => esc_url( $action ),
-					),
-				),
-				$form_data
-			);
-			echo '<form ' . evf_html_attributes( $form_atts['id'], $form_atts['class'], $form_atts['data'], $form_atts['atts'] ) . '>';
+		// Begin to build the output.
+		do_action( 'everest_forms_frontend_output_container_before', $form_data, $form );
 
-			do_action( 'everest_forms_frontend_output', $form_data, $title, $description );
+		printf( '<div class="evf-container %s" id="evf-%d">', esc_attr( $classes ), absint( $form_id ) );
 
-			echo '</form>';
+		do_action( 'everest_forms_frontend_output_form_before', $form_data, $form, $errors );
 
-		echo '</div>';
+		echo '<form ' . evf_html_attributes( $form_atts['id'], $form_atts['class'], $form_atts['data'], $form_atts['atts'] ) . '>';
+
+		do_action( 'everest_forms_frontend_output', $form_data, $title, $description, $errors );
+
+		echo '</form>';
+
+		do_action( 'everest_forms_frontend_output_form_after', $form_data, $form );
+
+		echo '</div><!-- .evf-container -->';
 
 		// After output hook.
 		do_action( 'everest_forms_frontend_output_after', $form_data, $form );

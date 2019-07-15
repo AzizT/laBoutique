@@ -59,6 +59,10 @@ class EVF_Install {
 			'evf_update_149_no_payment_options',
 			'evf_update_149_db_version',
 		),
+		'1.5.0' => array(
+			'evf_update_150_field_datetime_type',
+			'evf_update_150_db_version',
+		),
 	);
 
 	/**
@@ -618,7 +622,7 @@ CREATE TABLE {$wpdb->prefix}evf_sessions (
 		if ( EVF_PLUGIN_BASENAME == $plugin_file ) {
 			$new_plugin_meta = array(
 				'docs'    => '<a href="' . esc_url( apply_filters( 'everest_forms_docs_url', 'https://docs.wpeverest.com/documentation/plugins/everest-forms/' ) ) . '" aria-label="' . esc_attr__( 'View Everest Forms documentation', 'everest-forms' ) . '">' . esc_html__( 'Docs', 'everest-forms' ) . '</a>',
-				'support' => '<a href="' . esc_url( apply_filters( 'everest_forms_support_url', 'https://wpeverest.com/support-forum/' ) ) . '" aria-label="' . esc_attr__( 'Visit free customer support', 'everest-forms' ) . '">' . esc_html__( 'Free support', 'everest-forms' ) . '</a>',
+				'support' => '<a href="' . esc_url( apply_filters( 'everest_forms_support_url', 'https://wordpress.org/support/plugin/everest-forms/' ) ) . '" aria-label="' . esc_attr__( 'Visit free customer support', 'everest-forms' ) . '">' . esc_html__( 'Free support', 'everest-forms' ) . '</a>',
 			);
 
 			return array_merge( $plugin_meta, $new_plugin_meta );
